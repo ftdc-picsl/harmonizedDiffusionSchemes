@@ -35,7 +35,7 @@ plotGradDirs(inriaScheme$bvals, inriaScheme$bvecs, shells = c(0,1000,2000), opac
 ## The INRIA dirs are spread on the full sphere, which is good
 
 ## Now read the 12-dir shell
-elec12 = read.csv("elec012.csv")
+elec12 = normalizePoints(read.csv("elec012.csv"))
 
 ## B=500 matches ADNI 3, though they only get 6
 ## Make bvecs a matrix for compatibility with other functions
@@ -75,3 +75,47 @@ plotGradDirs(threeShellsWithZeros$bvals, threeShellsWithZeros$bvecs, shells = c(
 scaled = writeSiemensGradientTable(threeShellsWithZeros$bvals, threeShellsWithZeros$bvecs, "siemens_M9_N156_multishell.txt")
 
 by(scaled$gradientMagnitude, factor(threeShellsWithZeros$bvals), summary )
+
+
+
+## Inner shell from the INRIA direction set
+## Designed for fast DTI at b=1000
+
+innerShellScheme = list(bvecs = inriaScheme$bvecs[which(inriaScheme$bvals == 1000),], bvals = inriaScheme$bvals[which(inriaScheme$bvals == 1000)])
+
+## M = 4 for a total of 5 b=0 or a ratio of 9.6:1
+M = 4
+
+zeroScheme = list(bvecs = matrix(rep(0,M*3), ncol = 3), bvals = rep(0,M))
+
+innerShellWithZeros = mergeSchemes(innerShellScheme$bvals, innerShellScheme$bvecs, zeroScheme$bvals, zeroScheme$bvecs, offsetFromEnd = F)
+
+scaledInner = writeSiemensGradientTable(innerShellWithZeros$bvals, innerShellWithZeros$bvecs, "siemens_M4_N48_unishell.txt")
+
+by(scaledInner$gradientMagnitude, factor(innerShellWithZeros$bvals), summary )
+
+
+## Now produce an optimal 48-dir scheme for comparison
+
+elec48 = normalizePoints(read.csv("elec048.csv"))
+
+## B=500 matches ADNI 3, though they only get 6
+## Make bvecs a matrix for compatibility with other functions
+elec48Scheme = list(bvecs = as.matrix(elec48), bvals = rep(1000,48))
+
+## These directions are on a hemisphere, so let's distribute them
+elec48VecsFullSphere = distributeShellsOverSphere(elec48Scheme$bvals, elec48Scheme$bvecs, shells = c(0,1000))
+
+## Check
+cbind(elec48Scheme$bvecs, elec48VecsFullSphere)
+
+## replace bvecs
+elec48Scheme$bvecs = elec48VecsFullSphere
+
+plotGradDirs(elec48Scheme$bvals, elec48Scheme$bvecs, shells = c(0,1000), opacity = 1, projectToUpper = F)
+
+elec48WithZeros = mergeSchemes(elec48Scheme$bvals, elec48Scheme$bvecs, zeroScheme$bvals, zeroScheme$bvecs, offsetFromEnd = F)
+
+scaledElec48 = writeSiemensGradientTable(elec48WithZeros$bvals, elec48WithZeros$bvecs, "siemens_M4_N48_elec.txt")
+
+by(scaledElec48$gradientMagnitude, factor(elec48WithZeros$bvals), summary )
